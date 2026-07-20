@@ -12,5 +12,5 @@ data
 # Environment file
 .env
 
-# Web vault
-web-vault
+# Web vault (root build/extract dir only — anchored so branding/web-vault/ is NOT ignored)
+/web-vault

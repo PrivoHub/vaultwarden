@@ -1,0 +1,5 @@
+<svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 100 100" width="100" height="100">
+  <!-- Single-colour silhouette for safari-pinned-tab.svg. Keyhole is punched out via evenodd
+       so the mask icon reads as a shield with a hole, not a solid blob. Safari recolours it. -->
+  <path fill-rule="evenodd" fill="#000" d="M50 7 C50 7 74 15 83 18 C85 19 86 20 86 23 L86 49 C86 71 71 87 50 94 C29 87 14 71 14 49 L14 23 C14 20 15 19 17 18 C26 15 50 7 50 7 Z M59 43 A9 9 0 1 0 41 43 A9 9 0 1 0 59 43 Z M45 50 L55 50 L58 67 L42 67 Z"/>
+</svg>

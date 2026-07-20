@@ -1,0 +1,17 @@
+import { svg } from "../svg";
+
+// PrivoHub Vault square shield icon (replaces the upstream "vaultwarden" BitwardenShield).
+// viewBox 0 0 60 60. Green Aegis shield + white keyhole, matching icon.svg. Keeps the named
+// export `BitwardenShield`.
+const BitwardenShield = svg`
+<svg version="1.1" viewBox="0 0 60 60" xmlns="http://www.w3.org/2000/svg" fill="none">
+<title>PrivoHub Vault</title>
+<g transform="translate(0,2) scale(0.56)">
+  <path d="M50 7 C50 7 74 15 83 18 C85 19 86 20 86 23 L86 49 C86 71 71 87 50 94 C29 87 14 71 14 49 L14 23 C14 20 15 19 17 18 C26 15 50 7 50 7 Z" fill="#23A06B"/>
+  <circle cx="50" cy="43" r="9" fill="#fff"/>
+  <path d="M45 50 L55 50 L58 67 L42 67 Z" fill="#fff"/>
+</g>
+</svg>
+`;
+
+export { BitwardenShield };
