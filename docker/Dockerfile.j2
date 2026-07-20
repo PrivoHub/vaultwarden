@@ -10,24 +10,65 @@
 # 	https://whitfin.io/speeding-up-rust-docker-builds/
 
 ####################### VAULT BUILD IMAGE #######################
-# The web-vault digest specifies a particular web-vault build on Docker Hub.
-# Using the digest instead of the tag name provides better security,
-# as the digest of an image is immutable, whereas a tag name can later
-# be changed to point to a malicious image.
+# PrivoHub fork: rather than pulling the prebuilt vaultwarden/web-vault image, we build the
+# web-vault from source (vaultwarden/vw_web_builds — the Bitwarden web client fork) and overlay
+# PrivoHub Vault branding onto it BEFORE the build. This bakes branding in at the source level
+# (named SVGs + plain strings, no minified-JS patching), so a normal `docker build` of this repo
+# produces the fully branded image. See branding/web-vault/ and CLAUDE.md.
 #
-# To verify the current digest for a given tag name:
-# - From https://hub.docker.com/r/vaultwarden/web-vault/tags,
-#   click the tag name to view the digest of the image it currently points to.
-# - From the command line:
+# `web_vault_version` MUST stay in lockstep with the upstream web-vault `vault_version`/digest
+# below so our build matches the exact client release Vaultwarden expects. Upstream reference
+# image, kept for traceability / digest verification (NOT pulled by this build):
+#     docker.io/vaultwarden/web-vault@{{ vault_image_digest }}  (tag {{ vault_version }})
+#   To verify that digest for a tag name:
 #     $ docker pull docker.io/vaultwarden/web-vault:{{ vault_version | replace('+', '_') }}
 #     $ docker image inspect --format "{{ '{{' }}.RepoDigests}}" docker.io/vaultwarden/web-vault:{{ vault_version | replace('+', '_') }}
-#     [docker.io/vaultwarden/web-vault@{{ vault_image_digest }}]
 #
-# - Conversely, to get the tag name from the digest:
-#     $ docker image inspect --format "{{ '{{' }}.RepoTags}}" docker.io/vaultwarden/web-vault@{{ vault_image_digest }}
-#     [docker.io/vaultwarden/web-vault:{{ vault_version | replace('+', '_') }}]
-#
-FROM --platform=linux/amd64 docker.io/vaultwarden/web-vault@{{ vault_image_digest }} AS vault
+FROM --platform=linux/amd64 docker.io/library/node:22-trixie AS web-vault-build
+
+ARG WEB_VAULT_VERSION={{ web_vault_version }}
+ENV VAULT_FOLDER=bw_clients
+
+# git clones the client source; librsvg2-bin + imagemagick rasterize PrivoHub favicons.
+# hadolint ignore=DL3008
+RUN apt-get update && apt-get install -y --no-install-recommends \
+        git \
+        librsvg2-bin \
+        imagemagick && \
+    apt-get clean && rm -rf /var/lib/apt/lists/*
+
+WORKDIR /bw_web_builds
+
+# Clone the Vaultwarden web client fork at the pinned tag (the same source the upstream
+# web-vault image is built from).
+RUN git -c init.defaultBranch=main init "${VAULT_FOLDER}" && \
+    cd "${VAULT_FOLDER}" && \
+    git remote add vaultwarden https://github.com/vaultwarden/vw_web_builds.git && \
+    git fetch --depth 1 --tags vaultwarden "${WEB_VAULT_VERSION}" && \
+    git -c advice.detachedHead=false checkout "${WEB_VAULT_VERSION}"
+
+# Install node deps first so this (slow) layer caches independently of branding changes.
+RUN cd "${VAULT_FOLDER}" && npm ci
+
+# Overlay PrivoHub Vault branding (assets + strings + favicons). This script contains build
+# guards that FAIL the build if an upstream bump renamed/moved a branding target.
+COPY branding/web-vault /privohub-branding
+RUN /privohub-branding/apply-branding.sh "/bw_web_builds/${VAULT_FOLDER}"
+
+# Build the web-vault from source (same command as bw_web_builds' build_web_vault.sh).
+RUN cd "${VAULT_FOLDER}/apps/web" && \
+    npm run dist:oss:selfhost && \
+    mv build /web-vault && \
+    printf '{"version":"%s"}' "${WEB_VAULT_VERSION}" > /web-vault/vw-version.json
+
+# Final branding guards on the BUILT bundle: the brand name must be present, and the
+# "Vaultwarden Web" brand/wordmark string must be fully gone (it only ever lives in the brand
+# spots we overlay; the legal "...Web Vault for Vaultwarden..." disclaimer is intentionally kept).
+RUN grep -rqi "PrivoHub Vault" /web-vault || \
+    { echo "BRANDING GUARD FAILED: 'PrivoHub Vault' not found in built web-vault" >&2; exit 1; } && \
+    if grep -rq "Vaultwarden Web" /web-vault; then \
+      echo "BRANDING GUARD FAILED: 'Vaultwarden Web' still present in built web-vault" >&2; exit 1; \
+    fi
 
 {% if base == "debian" %}
 ########################## Cross Compile Docker Helper Scripts ##########################
@@ -233,7 +274,7 @@ WORKDIR /
 
 COPY docker/healthcheck.sh docker/start.sh /
 
-COPY --from=vault /web-vault ./web-vault
+COPY --from=web-vault-build /web-vault ./web-vault
 COPY --from=build /app/target/final/vaultwarden .
 
 HEALTHCHECK --interval=60s --timeout=10s CMD ["/healthcheck.sh"]
