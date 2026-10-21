@@ -1,0 +1,6 @@
+<svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 290 60" role="img" aria-label="PrivoHub Vault">
+  <g transform="translate(4 7) scale(0.46)">
+    <path d="M50 7 C50 7 74 15 83 18 C85 19 86 20 86 23 L86 49 C86 71 71 87 50 94 C29 87 14 71 14 49 L14 23 C14 20 15 19 17 18 C26 15 50 7 50 7 Z" fill="#FFFFFF"/><circle cx="50" cy="43" r="9" fill="#23A06B"/><path d="M45 50 L55 50 L58 67 L42 67 Z" fill="#23A06B"/>
+  </g>
+  <text x="56" y="40" font-family="Newsreader, Georgia, 'Times New Roman', serif" font-size="29" font-weight="600" letter-spacing="-0.5" fill="#FFFFFF">PrivoHub Vault</text>
+</svg>
